@@ -55,6 +55,24 @@ def get_course_reviews(course_id: str):
     return reviews_list, avg_rating, len(reviews_list)
 
 
+@app.get("/reviews/average_ratings")
+def get_average_ratings():
+    db = get_db()
+    reviews_collection = db["reviews"]
+
+    # Use aggregation pipeline to group by course_id, calculate average rating
+    pipeline = [
+        {"$group": {"_id": "$course_id", "average_rating": {"$avg": "$rating"}}}
+    ]
+    average_ratings = list(reviews_collection.aggregate(pipeline))
+
+    # Convert ObjectId to string (if needed for frontend)
+    for rating in average_ratings:
+        rating["_id"] = str(rating["_id"])
+
+    return average_ratings
+
+
 if __name__ == "__main__":
     import uvicorn
 
