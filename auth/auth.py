@@ -3,13 +3,13 @@ import jwt
 from datetime import datetime, timedelta
 import os
 from fastapi import FastAPI, Body, HTTPException, Depends, Header
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+# from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel,EmailStr, ValidationError
 from pymongo import MongoClient
-
+from fastapi.responses import JSONResponse
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+# from jose import JWTError
 
 # put variables into env include jwt secret
 
@@ -19,10 +19,8 @@ db = client["project3"]
 users_collection = db["auths"]
 app = FastAPI()
 
-
 security = HTTPBearer()
 JWT_SECRET ="asdasdasd"
-
 
 class User(BaseModel):
     email: EmailStr
@@ -36,8 +34,10 @@ class Credential(BaseModel):
 class Token(BaseModel):
     token: str
 
-def create_jwt(payload,secret_key):
+def create_jwt(payload,secret_key,expires_in_minutes=10):
     algorithm = 'HS256'
+    expiration = datetime.utcnow() + timedelta(minutes=expires_in_minutes)
+    payload.update({"exp": expiration})
     token = jwt.encode(payload, secret_key, algorithm=algorithm)
     return token
 
@@ -59,7 +59,12 @@ async def login(credentials:Credential):
         print("\n" + "="*40 + "\n")
         payload = {"email": credentials.email,"role":user["role"]}
         jwt_token = create_jwt(payload, JWT_SECRET)
-        return {"token": jwt_token}
+        # return {"token": jwt_token}
+
+        # Set cookie in response
+        response = JSONResponse({"token": jwt_token})
+        response.set_cookie(key="jwt_token", value=jwt_token, httponly=True)
+        return response
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
