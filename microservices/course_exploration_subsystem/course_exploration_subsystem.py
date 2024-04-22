@@ -26,6 +26,8 @@ class Course(BaseModel):
     platform: str
     level: str
     url: str
+    num_enrolled_students: int
+    price: float
 
 
 @app.get("/courses", response_model=list[Course])
