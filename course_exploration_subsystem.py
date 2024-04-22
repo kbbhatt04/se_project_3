@@ -43,6 +43,7 @@ async def get_courses(search: str = None, platform: str = None):
 
     return courses
 
+
 if __name__ == "__main__":
     import uvicorn
 
