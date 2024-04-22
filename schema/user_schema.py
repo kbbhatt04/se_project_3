@@ -1,4 +1,4 @@
-def individual(user) -> dict:
+def user_data(user) -> dict:
     return {
         "id": str(user["_id"]),
         "username": user["username"],
@@ -7,5 +7,5 @@ def individual(user) -> dict:
     }
 
 def list_users(users) -> list:
-    return [individual(user) for user in users]
+    return [user_data(user) for user in users]
 
