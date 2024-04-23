@@ -31,7 +31,7 @@ class Logger:
 def get_db():
     try:
         client = MongoClient(DATABASE_URL)
-        db = client["new"]
+        db = client["service_registry_db"]
         print("Connected to MongoDB!")
         return db
     except Exception as e:
@@ -50,10 +50,30 @@ async def register_service(service: Service):
     db = get_db()
     service_collection = db["service_registry"]
     service = service.model_dump()
+    service["created_at"] = datetime.now()
     service_id = service_collection.insert_one(service).inserted_id
     print(f"Service registered successfully with ID: {service_id}")
     logger.log(service_name=service["service_name"], message=f"Service registered successfully with ID: {service_id}", level='info')
     return {"message": "Service registered successfully!"}
+
+class GetService(BaseModel):
+    service_name: str
+
+@app.post("/get_service")
+async def get_service(serviceQuery: GetService):
+    db = get_db()
+    service_collection = db["service_registry"]
+    service_name = serviceQuery.service_name
+    service = service_collection.find_one({"service_name": service_name})
+    service['id'] = str(service['_id'])
+    del(service['_id'])
+
+    if service:
+        logger.log(service_name=service_name, message=f"{service_name} service found successfully!", level='info')
+        return service
+    else:
+        logger.log(service_name=service_name, message=f"{service_name} service not found!", level='error')
+        return {"message": "Service not found!"}
 
 if __name__ == "__main__":
     import uvicorn
