@@ -6,9 +6,15 @@ from fastapi import FastAPI, Body, HTTPException, Depends, Header
 # from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel,EmailStr, ValidationError
 from pymongo import MongoClient
+from fastapi.responses import JSONResponse, Response
 from fastapi.responses import JSONResponse
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import random
+import uuid
+
+
+
 # from jose import JWTError
 
 # put variables into env include jwt secret
@@ -41,6 +47,7 @@ def create_jwt(payload,secret_key,expires_in_minutes=10):
     token = jwt.encode(payload, secret_key, algorithm=algorithm)
     return token
 
+
 @app.get("/protected")
 async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(security)):
     print(credentials)
@@ -48,6 +55,23 @@ async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(se
     email = decoded_token.get("email")
     role = decoded_token.get("role")
     return {"message": "This is a protected route", "email": email, "role": role}
+
+sessions={}
+def create_session(user_email:str):
+    session_id = str(len(sessions) + random.randint(0, 1000000))
+    while session_id in sessions:
+        session_id = len(sessions) + random.randint(0, 1000000)
+    sessions[session_id] = {"email": user_email}
+    return session_id
+def get_user_from_session_id(session_id_b: str):
+    if session_id_b in sessions:
+        return session_id_b
+    else:
+        raise HTTPException(status_code=401, detail="Invalid session ID")
+
+@app.get("/me")
+def read_current_user(session_id: str = Depends(get_user_from_session_id)):
+    return {"session_id": session_id}
 
 @app.post("/login")
 async def login(credentials:Credential):
@@ -59,36 +83,16 @@ async def login(credentials:Credential):
         print("\n" + "="*40 + "\n")
         payload = {"email": credentials.email,"role":user["role"]}
         jwt_token = create_jwt(payload, JWT_SECRET)
-        # return {"token": jwt_token}
-
-        # Set cookie in response
         response = JSONResponse({"token": jwt_token})
+        session_id = create_session(credentials.email)
+        print("\n" + "="*20 + " " + "="*20 + "\n")
+        print("session id",session_id)
+        print("\n" + "="*40 + "\n")
+        response.set_cookie(key="session_id", value=session_id)
         response.set_cookie(key="jwt_token", value=jwt_token, httponly=True)
         return response
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-
-# @app.post("/validate")
-# async def validate(authorization: str = Header(...)):
-#     if not authorization: 
-#         raise HTTPException(status_code=401, detail="Missing credentials")
-#     print("\n" + "="*20 + " " + "="*20 + "\n")
-#     print(authorization)
-#     print("\n" + "="*40 + "\n")
-#     if len(authorization.split(" ")) != 2 or authorization.split(" ")[0].lower() != "bearer":
-#         raise HTTPException(status_code=401, detail="Invalid Authorization header")
-#     encoded_jwt=authorization.split(" ")[1]
-#     if not encoded_jwt: 
-#         raise HTTPException(status_code=401, detail="Missing credentials")
-    
-#     try:
-#         decoded = jwt.decode(
-#             encoded_jwt, JWT_SECRET, algorithms=["HS256"]
-#         )
-#     except:
-#         raise HTTPException(status_code=403, detail="Invalid token")
-#     return decoded
 
 @app.post("/validate")
 async def validate(credentials: HTTPAuthorizationCredentials= Depends(security)):
@@ -133,6 +137,12 @@ async def signup(user: User):
 
     return {"message": "User signed up successfully"}
 
+
+@app.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="session_id")
+    response.delete_cookie(key="jwt_token")
+    return {"message": "Logout successful"}
 
 if client is not None:
     print("Successfully connected to MongoDB")
