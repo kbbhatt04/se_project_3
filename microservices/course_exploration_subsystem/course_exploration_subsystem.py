@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from pymongo.mongo_client import MongoClient
@@ -19,7 +20,8 @@ app = FastAPI()
 
 
 class Course(BaseModel):
-    id: Optional[str] = None
+    _id: str
+    id: str
     title: str
     description: str
     instructor: str
@@ -43,7 +45,31 @@ async def get_courses(search: str = None, platform: str = None):
     if platform:
         courses = [c for c in courses if platform.strip().lower() == c["platform"].lower()]
 
+    print(courses)
+
+    for c in courses:
+        c["_id"] = str(c["_id"])
+        c["id"] = str(c["_id"])
+
+    print(courses)
+
     return courses
+
+
+@app.get("/courses/{course_id}", response_model=Course)
+def get_course(course_id: str):
+    db = get_db()
+    courses_collection = db["courses"]
+
+    # Find the course with the specified ID (convert ID to ObjectId)
+    course = courses_collection.find_one({"_id": ObjectId(course_id)})
+
+    # Check if course was found
+    if not course:
+        return {"message": f"Course with ID {course_id} not found"}
+
+    return course
+
 
 if __name__ == "__main__":
     import uvicorn
