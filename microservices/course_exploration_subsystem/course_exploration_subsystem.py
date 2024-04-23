@@ -29,6 +29,8 @@ class Course(BaseModel):
     level: str
     url: str
     num_enrolled_students: int
+    num_chapters: int
+    is_paid: str
     price: float
 
 
@@ -67,6 +69,8 @@ def get_course(course_id: str):
     # Check if course was found
     if not course:
         return {"message": f"Course with ID {course_id} not found"}
+
+    course["id"] = str(course["_id"])
 
     return course
 
