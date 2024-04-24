@@ -7,12 +7,11 @@ from pydantic import BaseModel, Field
 from pymongo.mongo_client import MongoClient
 from typing import Optional
 from datetime import datetime
+import requests
 
 
-# DATABASE_URL = "mongodb+srv://admin:UVdztRHHWkQC9atH@cluster0.v6xpxbx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
-# DATABASE_URL = "mongodb+srv://admin:veYwlbMIDu8cZ4ds@cluster0.axfu4kj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-DATABASE_URL = "mongodb+srv://admin:veYwlbMIDu8cZ4ds@cluster0.axfu4kj.mongodb.net/"
+DATABASE_URL = "mongodb+srv://admin:UVdztRHHWkQC9atH@cluster0.v6xpxbx.mongodb.net/"
+LOAD_BALANCER_URL = "http://localhost:4000"
 
 class Logger:
     def __init__(self, db_name='logs_db', collection_name='logs', host='localhost'):
@@ -20,7 +19,7 @@ class Logger:
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]
 
-    def log(self, service_name, message, level='info'):
+    def log(self,  message, level='info', service_name = "SERVICE REGISTRY"):
         timestamp = datetime.now()
         log_entry = {'timestamp': timestamp, 'message': message, 'service_name': service_name, 'level': level}
         self.collection.insert_one(log_entry)
@@ -52,8 +51,14 @@ async def register_service(service: Service):
     service = service.model_dump()
     service["created_at"] = datetime.now()
     service_id = service_collection.insert_one(service).inserted_id
+
+    response = requests.post(f"{LOAD_BALANCER_URL}/register_service", json={"service_name": service["service_name"], "service_url": service["service_url"], "id": service_id})
+    if response.status_code != 200:
+        logger.log(message=f"Failed to update instance to load balancer service with ID: {service_id}", level='error')
+        return {"message": "Failed to register service to load balancer!"}
+    
     print(f"Service registered successfully with ID: {service_id}")
-    logger.log(service_name=service["service_name"], message=f"Service registered successfully with ID: {service_id}", level='info')
+    logger.log( message=f"Service registered successfully with ID: {service_id}", level='info')
     return {"message": "Service registered successfully!"}
 
 class GetService(BaseModel):
@@ -69,10 +74,10 @@ async def get_service(serviceQuery: GetService):
     del(service['_id'])
 
     if service:
-        logger.log(service_name=service_name, message=f"{service_name} service found successfully!", level='info')
+        logger.log(message=f"{service_name} service found successfully!", level='info')
         return service
     else:
-        logger.log(service_name=service_name, message=f"{service_name} service not found!", level='error')
+        logger.log(message=f"{service_name} service not found!", level='error')
         return {"message": "Service not found!"}
 
 if __name__ == "__main__":
