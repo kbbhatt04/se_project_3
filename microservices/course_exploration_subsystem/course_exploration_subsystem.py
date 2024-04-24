@@ -27,20 +27,15 @@ class CourseExploration:
             print(e)
 
     @staticmethod
-    def get_courses(search: str = None, platform: str = None):
+    def get_courses(search: str = None):
         course_exploration = CourseExploration()
         courses_collection = CourseExploration._db["courses"]
         courses = list(courses_collection.find())
 
-        print(search)
+
         if search:
             courses = [c for c in courses if
                        search.strip().lower() in c["title"].lower() or search in c["description"].lower()]
-        print(platform)
-        if platform:
-            courses = [c for c in courses if platform.strip().lower() == c["platform"].lower()]
-
-        print(courses)
 
         for c in courses:
             c["_id"] = str(c["_id"])
@@ -103,8 +98,8 @@ class CourseExploration:
 
 
 @app.get("/courses", response_model=list[Course])
-def get_courses(search: str = None, platform: str = None):
-    return CourseExploration.get_courses(search, platform)
+def get_courses(search: str = None):
+    return CourseExploration.get_courses(search)
 
 
 @app.get("/courses/filter", response_model=list[Course])
