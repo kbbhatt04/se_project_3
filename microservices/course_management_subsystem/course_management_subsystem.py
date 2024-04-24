@@ -1,10 +1,10 @@
 import sys
 
-sys.path.append("../microservices")
+sys.path.append("../../microservices")
 from bson import ObjectId
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
-from microservices.models import Course
+from models import Course
 
 DATABASE_URL = "mongodb+srv://admin:admin@courses.2nficpj.mongodb.net/?retryWrites=true&w=majority"
 

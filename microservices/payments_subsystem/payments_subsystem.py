@@ -1,11 +1,14 @@
+import sys
+
+sys.path.append("../../microservices")
 import requests
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
-
-from microservices.payments_subsystem.CreditCardPayment import CreditCardPayment
-from microservices.payments_subsystem.DebitCardPayment import DebitCardPayment
-from microservices.payments_subsystem.PaymentProcessor import PaymentProcessor
-from microservices.payments_subsystem.UPIPayment import UPIPayment
+from models import PaymentData
+from CreditCardPayment import CreditCardPayment
+from DebitCardPayment import DebitCardPayment
+from PaymentProcessor import PaymentProcessor
+from UPIPayment import UPIPayment
 
 app = FastAPI()
 

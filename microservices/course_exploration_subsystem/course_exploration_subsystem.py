@@ -2,11 +2,11 @@ import sys
 
 import requests
 
-sys.path.append("../microservices")
+sys.path.append("../../microservices")
 from bson import ObjectId
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
-from microservices.models import Course
+from models import Course
 from PlatformCriteria import PlatformCriteria
 from LevelCriteria import LevelCriteria
 from PriceCriteria import PriceCriteria
