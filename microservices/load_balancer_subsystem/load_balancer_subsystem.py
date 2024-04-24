@@ -40,6 +40,23 @@ def get_db():
 app = FastAPI()
 logger=Logger()
 
+class Service(BaseModel):
+    id: str
+    service_name: str
+    service_url: str
+
+# this will be called by service registry subsystem to register a service
+@app.post("/register_service")
+async def register_service(service: Service):
+    db = get_db()
+    service_collection = db["service_registry"]
+    service = service.model_dump()
+    service['deleted'] = False
+    service_id = service_collection.insert_one(service).inserted_id
+    print(f"{service.service_name} instance registered successfully with ID: {service_id}")
+    logger.log(service_name="LOAD BALANCER", message=f"{service.service_name} instance registered successfully with ID: {service_id}", level='info')
+    return {"message": "Service instance registered successfully!"}
+
 
 if __name__ == "__main__":
     import uvicorn
