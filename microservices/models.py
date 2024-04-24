@@ -26,7 +26,7 @@ class Review(BaseModel):
 class Progress(BaseModel):
     user_id: str
     course_id: str
-    progress_details: set
+    progress_details: dict
 
 
 class PaymentData(BaseModel):
