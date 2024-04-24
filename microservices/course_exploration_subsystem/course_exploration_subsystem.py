@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("../../microservices")
 
 import requests
@@ -15,6 +16,7 @@ from RatingCriteria import RatingCriteria
 
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = FastAPI()
@@ -36,7 +38,6 @@ class CourseExploration:
         course_exploration = CourseExploration()
         courses_collection = CourseExploration._db["courses"]
         courses = list(courses_collection.find())
-
 
         if search:
             courses = [c for c in courses if
@@ -127,7 +128,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
-
 
 if __name__ == "__main__":
     import uvicorn

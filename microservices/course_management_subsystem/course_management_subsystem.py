@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("../../microservices")
 
 from bson import ObjectId
@@ -9,10 +10,10 @@ from models import Course
 
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 DATABASE_URL = "mongodb+srv://admin:admin@courses.2nficpj.mongodb.net/?retryWrites=true&w=majority"
-
 
 app = FastAPI()
 

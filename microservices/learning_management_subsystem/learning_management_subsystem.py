@@ -1,10 +1,11 @@
+import os
+
 import requests
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo.mongo_client import MongoClient
 
-import os
-from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
@@ -126,8 +127,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("learning_management_subsystem:app", host="0.0.0.0", port=int(os.getenv("learning_management_subsystem")))
+    uvicorn.run("learning_management_subsystem:app", host="0.0.0.0",
+                port=int(os.getenv("learning_management_subsystem")))
