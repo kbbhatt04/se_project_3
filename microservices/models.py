@@ -9,7 +9,7 @@ class Course(BaseModel):
     instructor: str
     platform: str
     level: str
-    url: str
+    url: list
     num_enrolled_students: int
     num_chapters: int
     is_paid: bool

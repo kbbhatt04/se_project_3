@@ -1,12 +1,12 @@
 import sys
+sys.path.append("../../microservices")
 
 import requests
-
-sys.path.append("../../microservices")
 from bson import ObjectId
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo.mongo_client import MongoClient
+
 from models import Course
 from PlatformCriteria import PlatformCriteria
 from LevelCriteria import LevelCriteria
@@ -16,7 +16,6 @@ from RatingCriteria import RatingCriteria
 import os
 from dotenv import load_dotenv
 load_dotenv()
-# port = os.getenv("course_exploration_subsystem")
 
 app = FastAPI()
 
@@ -66,7 +65,7 @@ class CourseExploration:
         elif filter == "price":
             filter_criteria = PriceCriteria(float(filter_value))
             courses = [c for c in courses if filter_criteria.meetsCriteria(c)]
-        else: # avg_rating
+        else:
             url = f"http://localhost:{os.getenv('course_review_subsystem')}/reviews/average_ratings"
             response = requests.get(url)
             temp_courses = None
@@ -91,10 +90,8 @@ class CourseExploration:
         course_exploration = CourseExploration()
         courses_collection = CourseExploration._db["courses"]
 
-        # Find the course with the specified ID (convert ID to ObjectId)
         course = courses_collection.find_one({"_id": ObjectId(course_id)})
 
-        # Check if course was found
         if not course:
             return {"message": f"Course with ID {course_id} not found"}
 
@@ -117,10 +114,12 @@ def get_filtered_courses(filter, filter_value):
 def get_course(course_id: str):
     return CourseExploration.get_course(course_id)
 
+
 origins = [
     "http://localhost",
     "http://localhost:3000"
 ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -128,6 +127,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
 
 if __name__ == "__main__":
     import uvicorn

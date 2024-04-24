@@ -1,12 +1,15 @@
 import sys
-
 sys.path.append("../../microservices")
+
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
+
 from models import Review
+
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
 DATABASE_URL = "mongodb+srv://admin:admin@courses.2nficpj.mongodb.net/?retryWrites=true&w=majority"
 
 

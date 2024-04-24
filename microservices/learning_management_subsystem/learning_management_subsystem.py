@@ -6,7 +6,10 @@ from pymongo.mongo_client import MongoClient
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
 app = FastAPI()
+
+
 class LearningManagement:
     _db = None
 
@@ -109,10 +112,12 @@ def add_to_progress(course_id: str, user_id: str, chapter: int):
 def remove_from_progress(course_id: str, user_id: str, chapter: int):
     return LearningManagement.remove_from_progress(course_id, user_id, chapter)
 
+
 origins = [
     "http://localhost",
     "http://localhost:3000"
 ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -120,6 +125,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
 
 if __name__ == "__main__":
     import uvicorn

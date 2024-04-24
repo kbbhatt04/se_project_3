@@ -1,20 +1,23 @@
 import sys
-
 sys.path.append("../../microservices")
+
 import requests
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
+
 from models import PaymentData
 from CreditCardPayment import CreditCardPayment
 from DebitCardPayment import DebitCardPayment
 from PaymentProcessor import PaymentProcessor
 from UPIPayment import UPIPayment
 
-app = FastAPI()
-
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
+app = FastAPI()
+
+
 class PaymentsSubsystem:
     _db = None
 
@@ -45,7 +48,7 @@ class PaymentsSubsystem:
             else:
                 print("Invalid payment method!")
 
-            url = f"http://localhost:8000/courses/{course_id}"
+            url = f"http://localhost:{os.getenv('course_exploration_subsystem')}/courses/{course_id}"
             price = 0
             response = requests.get(url)
             if response.status_code == 200:
