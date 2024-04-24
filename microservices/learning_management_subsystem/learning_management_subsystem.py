@@ -66,6 +66,18 @@ class LearningManagement:
             return {"error": response.status_code}
 
     @staticmethod
+    def get_chapter_progress(course_id: str, user_id: str):
+        learning_management = LearningManagement()
+        progress_collection = LearningManagement._db["progress"]
+
+        f = {"course_id": course_id, "user_id": user_id}
+        progress = progress_collection.find_one(f)
+
+        del(progress["_id"])
+
+        return progress
+
+    @staticmethod
     def add_to_progress(course_id: str, user_id: str, chapter: int):
         learning_management = LearningManagement()
         progress_collection = LearningManagement._db["progress"]
@@ -104,14 +116,19 @@ def track_progress(course_id: str, user_id: str):
     return LearningManagement.track_progress(course_id, user_id)
 
 
+@app.post("/get_chapter_progress")
+def get_chapter_progress(course_id: str, user_id: str):
+    return LearningManagement.get_chapter_progress(course_id, user_id)
+
+
 @app.post("/add_to_progress")
-def add_to_progress(course_id: str, user_id: str, chapter: int):
-    return LearningManagement.add_to_progress(course_id, user_id, chapter)
+def add_to_progress(course_id: str, user_id: str, chapter: str):
+    return LearningManagement.add_to_progress(course_id, user_id, int(chapter))
 
 
 @app.post("/remove_from_progress")
-def remove_from_progress(course_id: str, user_id: str, chapter: int):
-    return LearningManagement.remove_from_progress(course_id, user_id, chapter)
+def remove_from_progress(course_id: str, user_id: str, chapter: str):
+    return LearningManagement.remove_from_progress(course_id, user_id, int(chapter))
 
 
 origins = [
