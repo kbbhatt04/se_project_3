@@ -51,19 +51,30 @@ async def register_service(service: Service):
     db = get_db()
     service_collection = db["service_registry"]
     service = service.model_dump()
+
+    print(service)
     service['deleted'] = False
     service_id = service_collection.insert_one(service).inserted_id
-    print(f"{service.service_name} instance registered successfully with ID: {service_id}")
-    logger.log(service_name="LOAD BALANCER", message=f"{service.service_name} instance registered successfully with ID: {service_id}", level='info')
-    return {"message": "Service instance registered successfully!"}
+    print(f"{service['service_name']} instance registered successfully with ID: {service_id}")
+    logger.log( message=f"{service['service_name']} instance registered successfully with ID: {service_id}", level='info')
+    return {"message": "Service instance registered successfully!", "id": str(service_id)}
 
 
 async  def route_request(service_type, instance, body, path):
+
+    
     service_url = instance['service_url'] + "/" + path
+
+    print(service_url)
+    print(service_type)
+
+    return
     if service_type == "GET":
         response = requests.get(service_url)
     elif service_type == "POST":
+        print(body)
         response = requests.post(service_url, json=body)
+
     return response.json()
 
 class Request(BaseModel):
@@ -88,28 +99,49 @@ async def balance_load(request: Request):
 
     if instances_count == 0:
         logger.log(message=f"No instances found for {service_name} service!", level='error')
+        print(f"No instances found for {service_name} service!")
         return {"message": "No instances found for the service!"}
     else:
         logger.log(message=f"Total instances found for {service_name} service: {instances_count}", level='info')
-        
+        print(f"Total instances found for {service_name} service: {instances_count}")
+
         load_balancing_collection = db["load_balancing"]
         load_balancing = load_balancing_collection.find_one({"service_name": service_name})
+        load_balancing['id'] = str(load_balancing['_id'])
+        del(load_balancing['_id'])
+
+        
         instances_index = 0
         if load_balancing:
+
+            print("load_balancing present" )
             instances_index = load_balancing['last_instance_index']
             instances_index = (instances_index + 1) % instances_count #simple round robin
+
+            print(f"instances_index: {instances_index}")
             load_balancing_collection.update_one({"service_name": service_name}, {"$set": {"last_instance_index": instances_index}})
         else:
+
+            print("load_balancing not present" )
             load_balancing_collection.insert_one({"service_name": service_name, "last_instance_index": instances_index})
 
         instance = instances[instances_index]
+        del(instance['_id'])
         
         logger.log(message=f"Load balanced to {service_name} instance with ID: {instance['id']}", level='info')
-
-        return route_request(service_type, instance, body, path)
-
+        print(f"Load balanced to {service_name} instance with ID: {instance['id']}")
+        return await route_request(service_type, instance, body, path)
+    
+#health monitor will notify load balancer about the service status
+@app.get("/deregister_service/{service_id}")
+async def deregister_service(service_id: str):
+    db = get_db()
+    service_collection = db["service_registry"]
+    service_collection.update_one({"id": service_id}, {"$set": {"deleted": True}})
+    logger.log(message=f"{service_id} deregistered successfully!", level='info')
+    return {"message": "Service instance deregistered successfully!"}
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("service_registry_subsystem:app", host="0.0.0.0", port=8000)
+    uvicorn.run("load_balancer_subsystem:app", host="0.0.0.0", port=8000)
