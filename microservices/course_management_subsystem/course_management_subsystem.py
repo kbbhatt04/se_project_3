@@ -5,7 +5,9 @@ from bson import ObjectId
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
 from models import Course
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 DATABASE_URL = "mongodb+srv://admin:admin@courses.2nficpj.mongodb.net/?retryWrites=true&w=majority"
 
 
@@ -60,4 +62,4 @@ def delete_course(course_id: str):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("course_management_subsystem:app", host="0.0.0.0", port=8001)
+    uvicorn.run("course_management_subsystem:app", host="0.0.0.0", port=int(os.getenv('course_management_subsystem')))

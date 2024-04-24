@@ -5,12 +5,18 @@ import requests
 sys.path.append("../../microservices")
 from bson import ObjectId
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo.mongo_client import MongoClient
 from models import Course
 from PlatformCriteria import PlatformCriteria
 from LevelCriteria import LevelCriteria
 from PriceCriteria import PriceCriteria
 from RatingCriteria import RatingCriteria
+
+import os
+from dotenv import load_dotenv
+load_dotenv()
+# port = os.getenv("course_exploration_subsystem")
 
 app = FastAPI()
 
@@ -61,7 +67,7 @@ class CourseExploration:
             filter_criteria = PriceCriteria(float(filter_value))
             courses = [c for c in courses if filter_criteria.meetsCriteria(c)]
         else: # avg_rating
-            url = f"http://localhost:8001/reviews/average_ratings"
+            url = f"http://localhost:{os.getenv('course_review_subsystem')}/reviews/average_ratings"
             response = requests.get(url)
             temp_courses = None
             if response.status_code == 200:
@@ -111,8 +117,19 @@ def get_filtered_courses(filter, filter_value):
 def get_course(course_id: str):
     return CourseExploration.get_course(course_id)
 
+origins = [
+    "http://localhost",
+    "http://localhost:3000"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("course_exploration_subsystem:app", host="0.0.0.0", port=8000)
+    uvicorn.run("course_exploration_subsystem:app", host="0.0.0.0", port=int(os.getenv("course_exploration_subsystem")))

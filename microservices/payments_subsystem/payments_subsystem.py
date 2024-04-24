@@ -12,7 +12,9 @@ from UPIPayment import UPIPayment
 
 app = FastAPI()
 
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 class PaymentsSubsystem:
     _db = None
 
@@ -68,4 +70,4 @@ def do_payment(payment_data: PaymentData):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("payments_subsystem:app", host="0.0.0.0", port=8004)
+    uvicorn.run("payments_subsystem:app", host="0.0.0.0", port=int(os.getenv("payments_subsystem")))

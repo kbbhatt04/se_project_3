@@ -1,10 +1,12 @@
 import requests
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo.mongo_client import MongoClient
 
+import os
+from dotenv import load_dotenv
+load_dotenv()
 app = FastAPI()
-
-
 class LearningManagement:
     _db = None
 
@@ -28,7 +30,7 @@ class LearningManagement:
         if existing_enrollment:
             raise HTTPException(status_code=400, detail="User already enrolled in this course")
 
-        url = f"http://localhost:8004/payment"
+        url = f"http://localhost:{os.getenv('payments_subsystem')}/payment"
         data = {"course_id": course_id, "user_id": user_id, "payment_method": payment_method}
         response = requests.post(url, json=data)
         print(response, response.text)
@@ -46,7 +48,7 @@ class LearningManagement:
         learning_management = LearningManagement()
         progress_collection = LearningManagement._db["progress"]
 
-        url = f"http://localhost:8000/courses/{course_id}"
+        url = f"http://localhost:{os.getenv('course_exploration_subsystem')}/courses/{course_id}"
 
         response = requests.get(url)
         if response.status_code == 200:
@@ -107,8 +109,19 @@ def add_to_progress(course_id: str, user_id: str, chapter: int):
 def remove_from_progress(course_id: str, user_id: str, chapter: int):
     return LearningManagement.remove_from_progress(course_id, user_id, chapter)
 
+origins = [
+    "http://localhost",
+    "http://localhost:3000"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("learning_management_subsystem:app", host="0.0.0.0", port=8003)
+    uvicorn.run("learning_management_subsystem:app", host="0.0.0.0", port=int(os.getenv("learning_management_subsystem")))
