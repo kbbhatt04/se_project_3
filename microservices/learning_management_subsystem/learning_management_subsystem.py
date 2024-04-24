@@ -18,7 +18,7 @@ class LearningManagement:
 
     @staticmethod
     def enroll_student(course_id: str, user_id: str, payment_method: str):
-        learningmanagement = LearningManagement()
+        learning_management = LearningManagement()
         enrollments_collection = LearningManagement._db["enrollment"]
         enrollment_data = {"user_id": user_id, "course_id": course_id}
 
@@ -43,7 +43,7 @@ class LearningManagement:
 
     @staticmethod
     def track_progress(course_id: str, user_id: str):
-        learningmanagement = LearningManagement()
+        learning_management = LearningManagement()
         progress_collection = LearningManagement._db["progress"]
 
         url = f"http://localhost:8000/courses/{course_id}"
@@ -59,15 +59,53 @@ class LearningManagement:
             print(f"Error: {response.status_code}")
             return {"error": response.status_code}
 
+    @staticmethod
+    def add_to_progress(course_id: str, user_id: str, chapter: int):
+        learning_management = LearningManagement()
+        progress_collection = LearningManagement._db["progress"]
+        progress_data = {"user_id": user_id, "course_id": course_id}
+        res = progress_collection.find_one(progress_data)
+        res["progress_details"][str(chapter)] = True
 
-@app.post("/enrollments")
+        newvalues = {"$set": {"progress_details": res["progress_details"]}}
+
+        progress_collection.update_one(progress_data, newvalues)
+
+        return {"message": "Progress updated"}
+
+    @staticmethod
+    def remove_from_progress(course_id: str, user_id: str, chapter: int):
+        learning_management = LearningManagement()
+        progress_collection = LearningManagement._db["progress"]
+        progress_data = {"user_id": user_id, "course_id": course_id}
+        res = progress_collection.find_one(progress_data)
+        del (res["progress_details"][str(chapter)])
+
+        newvalues = {"$set": {"progress_details": res["progress_details"]}}
+
+        progress_collection.update_one(progress_data, newvalues)
+
+        return {"message": "Progress updated"}
+
+
+@app.post("/enroll_student")
 def enroll_student(course_id: str, user_id: str, payment_method: str):
     return LearningManagement.enroll_student(course_id, user_id, payment_method)
 
 
-@app.post("/progress")
+@app.post("/track_progress")
 def track_progress(course_id: str, user_id: str):
     return LearningManagement.track_progress(course_id, user_id)
+
+
+@app.post("/add_to_progress")
+def add_to_progress(course_id: str, user_id: str, chapter: int):
+    return LearningManagement.add_to_progress(course_id, user_id, chapter)
+
+
+@app.post("/remove_from_progress")
+def remove_from_progress(course_id: str, user_id: str, chapter: int):
+    return LearningManagement.remove_from_progress(course_id, user_id, chapter)
 
 
 if __name__ == "__main__":
