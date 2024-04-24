@@ -1,20 +1,11 @@
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
 
 from microservices.payments_subsystem.CreditCardPayment import CreditCardPayment
 from microservices.payments_subsystem.DebitCardPayment import DebitCardPayment
 from microservices.payments_subsystem.PaymentProcessor import PaymentProcessor
 from microservices.payments_subsystem.UPIPayment import UPIPayment
-
-from pydantic import BaseModel
-
-
-class PaymentData(BaseModel):
-    user_id: str
-    course_id: str
-    payment_method: str
-
 
 app = FastAPI()
 
@@ -58,7 +49,8 @@ class PaymentsSubsystem:
 
             processor.process_payment(price)
 
-            payment_data = {"user_id": user_id, "course_id": course_id, "amount": price, "payment_method": payment_method}
+            payment_data = {"user_id": user_id, "course_id": course_id, "amount": price,
+                            "payment_method": payment_method}
             payments_collection = PaymentsSubsystem._db["payments"]
             payments_collection.insert_one(payment_data)
 

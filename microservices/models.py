@@ -14,3 +14,23 @@ class Course(BaseModel):
     num_chapters: int
     is_paid: bool
     price: float
+
+
+class Review(BaseModel):
+    user_id: str
+    course_id: str
+    rating: int
+    review: str
+
+
+class Progress(BaseModel):
+    user_id: str
+    course_id: str
+    completion_status: str
+    progress_details: dict
+
+
+class PaymentData(BaseModel):
+    user_id: str
+    course_id: str
+    payment_method: str
