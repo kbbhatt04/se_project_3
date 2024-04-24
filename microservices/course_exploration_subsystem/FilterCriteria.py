@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
 
 
-class FilterCriteria:
-    def meetsCriteria(self):
+class FilterCriteria(ABC):
+    @abstractmethod
+    def meetsCriteria(self, course):
         pass
