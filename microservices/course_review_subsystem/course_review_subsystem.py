@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append("../../microservices")
-
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
 
@@ -94,6 +94,18 @@ def get_course_reviews(course_id: str):
 @app.get("/reviews/average_ratings")
 def get_average_ratings():
     return CourseReview.get_average_ratings()
+origins = [
+    "http://localhost",
+    "http://localhost:3000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 
 if __name__ == "__main__":

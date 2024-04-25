@@ -5,7 +5,7 @@ sys.path.append("../../microservices")
 from bson import ObjectId
 from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
-
+from fastapi.middleware.cors import CORSMiddleware
 from models import Course
 
 import os
@@ -61,6 +61,18 @@ def add_course(course: Course):
 @app.delete("/delete_course/{course_id}")
 def delete_course(course_id: str):
     return CourseManagement.delete_course(course_id)
+origins = [
+    "http://localhost",
+    "http://localhost:3000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 
 if __name__ == "__main__":

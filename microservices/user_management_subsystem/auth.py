@@ -10,10 +10,9 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.responses import JSONResponse
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.middleware.cors import CORSMiddleware
 import random
 import uuid
-
-
 
 # from jose import JWTError
 
@@ -39,6 +38,7 @@ class Credential(BaseModel):
 
 class Token(BaseModel):
     token: str
+
 
 def create_jwt(payload,secret_key,expires_in_minutes=10):
     algorithm = 'HS256'
@@ -78,17 +78,13 @@ async def login(credentials:Credential):
     print(credentials)
     user = users_collection.find_one({"email": credentials.email})
     if user and user["password"] == credentials.password:
-        print("\n" + "="*20 + " " + "="*20 + "\n")
-        print(user)
-        print("\n" + "="*40 + "\n")
         payload = {"email": credentials.email,"role":user["role"]}
         jwt_token = create_jwt(payload, JWT_SECRET)
-        response = JSONResponse({"token": jwt_token})
+        response = JSONResponse({"token": jwt_token, "role": user["role"], "user_id": str(user["_id"])})
+        print()
+        print(Response)
+        print()
         session_id = create_session(credentials.email)
-        print("\n" + "="*20 + " " + "="*20 + "\n")
-        print("session id",session_id)
-        print("\n" + "="*40 + "\n")
-        response.set_cookie(key="session_id", value=session_id)
         response.set_cookie(key="jwt_token", value=jwt_token, httponly=True)
         return response
     else:
@@ -114,18 +110,33 @@ async def validate(credentials: HTTPAuthorizationCredentials= Depends(security))
         raise HTTPException(status_code=403, detail="Invalid token")
     return decoded
 
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
 @app.post("/signup")
 async def signup(user: User):
-    print("\n", user)
     existing_user = users_collection.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+
     try:
         user_data = user.dict()
-        print(user_data)
+        users_collection.insert_one(user_data)
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     # if len(user_data['password']) < 8:
     #     raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
 
@@ -133,21 +144,23 @@ async def signup(user: User):
     # if len(user_data['password']) < 8 or not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$', user_data['password']):
     #     raise HTTPException(status_code=400, detail="Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character")
 
-    users_collection.insert_one(user_data)
-
     return {"message": "User signed up successfully"}
-
 
 @app.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie(key="session_id")
+    response.delete_cookiekey="session_id"
     response.delete_cookie(key="jwt_token")
     return {"message": "Logout successful"}
+
+
+
+
 
 if client is not None:
     print("Successfully connected to MongoDB")
 else:
     print("errro")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
