@@ -3,7 +3,10 @@ import os
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi import Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fpdf import FPDF
 from pymongo.mongo_client import MongoClient
 
 load_dotenv()
@@ -48,6 +51,25 @@ class LearningManagement:
         return {"message": "Enrolled successfully"}
 
     @staticmethod
+    def generate_certificate(user_id: str, course_title: str):
+        pdf = FPDF()
+        pdf.add_page()
+
+        # Set font and title
+        pdf.set_font("Arial", size=24)
+        pdf.cell(200, 10, txt="Certificate of Completion", align="C")
+
+        # Add student name and course title
+        pdf.set_font("Arial", size=16)
+        pdf.cell(200, 10, txt=f"This certificate is awarded to", ln=1)
+        pdf.cell(200, 10, txt=f"{user_id}", align="C")
+        pdf.cell(200, 10, txt=f"for successfully completing the course", ln=1)
+        pdf.cell(200, 10, txt=f"{course_title}", align="C")
+
+        temp_filename = f"certificate_{user_id}.pdf"
+        pdf.output(temp_filename)
+
+    @staticmethod
     def track_progress(course_id: str, user_id: str):
         learning_management = LearningManagement()
         progress_collection = LearningManagement._db["progress"]
@@ -59,8 +81,12 @@ class LearningManagement:
             course = response.json()
             course_num_units = course["num_chapters"]
             completed_units = progress_collection.find_one({"user_id": user_id, "course_id": course_id})
-            return {
-                "completion_percentage": len(list(completed_units["progress_details"].keys())) * 100 / course_num_units}
+            if completed_units and len(list(completed_units["progress_details"].keys())) == course_num_units:
+                return {"completion_percentage": 100,
+                        "download_link": LearningManagement.generate_certificate(user_id, course["title"])}
+            else:
+                return {"completion_percentage": len(
+                    list(completed_units["progress_details"].keys())) * 100 / course_num_units}
         else:
             print(f"Error: {response.status_code}")
             return {"error": response.status_code}
@@ -73,7 +99,7 @@ class LearningManagement:
         f = {"course_id": course_id, "user_id": user_id}
         progress = progress_collection.find_one(f)
 
-        del(progress["_id"])
+        del (progress["_id"])
 
         return progress
 
@@ -105,6 +131,15 @@ class LearningManagement:
 
         return {"message": "Progress updated"}
 
+    @staticmethod
+    def download_certificate(user_id: str):
+        filename = f"certificate_{user_id}.pdf"
+        filepath = os.path.join(os.getcwd(), filename)  # Adjust path based on your implementation
+        if not os.path.exists(filepath):
+            return Response(status_code=404)
+
+        return FileResponse(filepath, media_type='application/pdf', filename=filename)
+
 
 @app.post("/enroll_student")
 def enroll_student(course_id: str, user_id: str, payment_method: str):
@@ -129,6 +164,11 @@ def add_to_progress(course_id: str, user_id: str, chapter: str):
 @app.post("/remove_from_progress")
 def remove_from_progress(course_id: str, user_id: str, chapter: str):
     return LearningManagement.remove_from_progress(course_id, user_id, int(chapter))
+
+
+@app.get("/download_certificate")
+def download_certificate(user_id: str):
+    return LearningManagement.download_certificate(user_id)
 
 
 origins = [
