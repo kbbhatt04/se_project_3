@@ -1,10 +1,9 @@
-from bson import ObjectId
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from pymongo.mongo_client import MongoClient
-from typing import Optional
 
 DATABASE_URL = "mongodb+srv://admin:admin@courses.2nficpj.mongodb.net/?retryWrites=true&w=majority"
+
 
 def get_db(db_name):
     try:
@@ -17,6 +16,7 @@ def get_db(db_name):
 
 app = FastAPI()
 
+
 class Course(BaseModel):
     _id: str
     id: str
@@ -25,11 +25,12 @@ class Course(BaseModel):
     instructor: str
     platform: str
     level: str
-    url: str
+    url: list
     num_enrolled_students: int
     num_chapters: int
     is_paid: bool
     price: float
+
 
 class Review(BaseModel):
     user_id: str
@@ -39,19 +40,10 @@ class Review(BaseModel):
 
 
 @app.get("/courses", response_model=list[Course])
-async def get_courses(search: str = None, platform: str = None):
+def get_courses():
     db = get_db("courses_db")
     courses_collection = db["courses"]
     courses = list(courses_collection.find())
-
-    print(search)
-    if search:
-        courses = [c for c in courses if search.strip().lower() in c["title"].lower() or search in c["description"].lower()]
-    print(platform)
-    if platform:
-        courses = [c for c in courses if platform.strip().lower() == c["platform"].lower()]
-
-    print(courses)
 
     for c in courses:
         c["_id"] = str(c["_id"])
@@ -61,32 +53,27 @@ async def get_courses(search: str = None, platform: str = None):
 
     return courses
 
-@app.post("/enrollments/{course_id}")
-def enroll_student(course_id: str, user_id: str):
+
+@app.post("/enroll")
+def enroll(course_id: str, user_id: str):
     db = get_db("learning_db")
     enrollments_collection = db["enrollment"]
     enrollment_data = {"user_id": user_id, "course_id": course_id}
-    # Check if user is already enrolled
-    existing_enrollment = enrollments_collection.find_one(
-        {"user_id": user_id, "course_id": course_id}
-    )
+
+    existing_enrollment = enrollments_collection.find_one(enrollment_data)
     if existing_enrollment:
         raise HTTPException(status_code=400, detail="User already enrolled in this course")
 
-    # Enroll student (if validations pass)
-    enrollment_data = {"user_id": user_id, "course_id": course_id}
     enrollments_collection.insert_one(enrollment_data)
 
     return {"message": "Enrolled successfully"}
 
 
-
 @app.post("/add_review")
-async def add_review(review: Review):
+def add_review(review: Review):
     db = get_db("reviews_db")
     reviews_collection = db["reviews"]
 
-    # Insert the review data
     reviews_collection.insert_one(review.dict())
 
     return {"message": "Review added successfully"}
