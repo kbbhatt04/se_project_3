@@ -9,6 +9,10 @@ from typing import Optional
 from datetime import datetime
 import requests
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATABASE_URL = "mongodb+srv://admin:UVdztRHHWkQC9atH@cluster0.v6xpxbx.mongodb.net/"
 
@@ -46,7 +50,7 @@ class Service(BaseModel):
     service_url: str
 
 # this will be called by service registry subsystem to register a service
-@app.post("/register_service")
+@app.post("/register_service_load_balancer")
 async def register_service(service: Service):
     db = get_db()
     service_collection = db["service_registry"]
@@ -140,8 +144,8 @@ async def deregister_service(service_id: str):
     service_collection.update_one({"id": service_id}, {"$set": {"deleted": True}})
     logger.log(message=f"{service_id} deregistered successfully!", level='info')
     return {"message": "Service instance deregistered successfully!"}
-
+   
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("load_balancer_subsystem:app", host="0.0.0.0", port=8000)
+    print("starting load balancer subsystem")
+    uvicorn.run("load_balancer_subsystem:app", host="0.0.0.0", port=int(os.getenv('load_balancer_subsystem')))

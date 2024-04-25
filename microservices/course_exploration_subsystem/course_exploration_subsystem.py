@@ -21,6 +21,8 @@ load_dotenv()
 
 app = FastAPI()
 
+SERVICE_REGISTRY_URL = f"http://localhost:{os.getenv('service_registry_subsystem')}"
+
 
 class CourseExploration:
     _db = None
@@ -129,7 +131,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#generate heartbeat
+@app.get("/health")
+async def health():
+    return {"message": "Service is up and running!"}
+
 if __name__ == "__main__":
     import uvicorn
+    requests.post(f"{SERVICE_REGISTRY_URL}/register_service", json={"service_name": "course_exploration_subsystem", "service_url": f"http://localhost:{os.getenv('course_exploration_subsystem')}"})
 
     uvicorn.run("course_exploration_subsystem:app", host="0.0.0.0", port=int(os.getenv("course_exploration_subsystem")))

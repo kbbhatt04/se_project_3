@@ -8,10 +8,14 @@ from pymongo.mongo_client import MongoClient
 from typing import Optional
 from datetime import datetime
 import requests
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 DATABASE_URL = "mongodb+srv://admin:UVdztRHHWkQC9atH@cluster0.v6xpxbx.mongodb.net/"
-LOAD_BALANCER_URL = "http://localhost:4000"
+LOAD_BALANCER_URL = f"http://localhost:{os.getenv('load_balancer_subsystem')}"
+HEALTH_MONITOR_URL = f"http://localhost:{os.getenv('health_monitor_subsystem')}"
 
 class Logger:
     def __init__(self, db_name='logs_db', collection_name='logs', host='localhost'):
@@ -50,12 +54,18 @@ async def register_service(service: Service):
     service_collection = db["service_registry"]
     service = service.model_dump()
     service["created_at"] = datetime.now()
+    service["deleted"] = False
     service_id = service_collection.insert_one(service).inserted_id
 
-    response = requests.post(f"{LOAD_BALANCER_URL}/register_service", json={"service_name": service["service_name"], "service_url": service["service_url"], "id": service_id})
+    response = requests.post(f"{LOAD_BALANCER_URL}/register_service_load_balancer", json={"service_name": service["service_name"], "service_url": service["service_url"], "id": str(service_id)})
     if response.status_code != 200:
         logger.log(message=f"Failed to update instance to load balancer service with ID: {service_id}", level='error')
         return {"message": "Failed to register service to load balancer!"}
+    
+    response = requests.post(f"{HEALTH_MONITOR_URL}/register_service_health_monitor", json={"service_name": service["service_name"], "service_url": service["service_url"], "id": str(service_id)})
+    if response.status_code != 200:
+        logger.log(message=f"Failed to register instance to health monitor service with ID: {service_id}", level='error')
+        return {"message": "Failed to register service to health monitor!"}
     
     print(f"Service registered successfully with ID: {service_id}")
     logger.log( message=f"Service registered successfully with ID: {service_id}", level='info')
@@ -80,7 +90,17 @@ async def get_service(serviceQuery: GetService):
         logger.log(message=f"{service_name} service not found!", level='error')
         return {"message": "Service not found!"}
 
+#health monitor will notify load balancer about the service status
+@app.get("/deregister_service/{service_id}")
+async def deregister_service(service_id: str):
+    db = get_db()
+    service_collection = db["service_registry"]
+    service_collection.update_one({"_id": service_id}, {"$set": {"deleted": True}})
+    logger.log(message=f"{service_id} deregistered successfully!", level='info')
+    return {"message": "Service instance deregistered successfully!"}
+
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("service_registry_subsystem:app", host="0.0.0.0", port=8000)
+    print("Starting service registry subsystem")
+    requests.get(f"{HEALTH_MONITOR_URL}/start_health_monitor")
+    uvicorn.run("service_registry_subsystem:app", host="0.0.0.0", port=int(os.getenv('service_registry_subsystem')))

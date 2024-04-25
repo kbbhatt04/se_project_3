@@ -12,12 +12,15 @@ import time
 import threading
 import smtplib
 from email.mime.text import MIMEText
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 
 DATABASE_URL = "mongodb+srv://admin:UVdztRHHWkQC9atH@cluster0.v6xpxbx.mongodb.net/"
-LOAD_BALANCER_URL = "http://localhost:4000"
-SERVICE_REGISTRY_URL = "http://localhost:6000"
+LOAD_BALANCER_URL = f"http://localhost:{os.getenv('load_balancer_subsystem')}"
+SERVICE_REGISTRY_URL = f"http://localhost:{os.getenv('service_registry_subsystem')}"
 START_HEALTH_MONITOR = False
 
 PING_THRESHOLD = 3
@@ -177,4 +180,4 @@ def monitor_health():
 if __name__ == "__main__":
     import uvicorn
     print("Starting health monitor subsystem")
-    uvicorn.run("health_monitor_subsystem:app", host="0.0.0.0", port=7002)
+    uvicorn.run("health_monitor_subsystem:app", host="0.0.0.0", port=int(os.getenv("health_monitor_subsystem")))
