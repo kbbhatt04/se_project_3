@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
+SERVICE_REGISTRY_URL = f"http://localhost:{os.getenv('service_registry_subsystem')}"
 
 
 class PaymentsSubsystem:
@@ -71,8 +72,12 @@ class PaymentsSubsystem:
 def do_payment(payment_data: PaymentData):
     return PaymentsSubsystem.do_payment(payment_data.user_id, payment_data.course_id, payment_data.payment_method)
 
+#generate heartbeat
+@app.get("/health")
+async def health():
+    return {"message": "Service is up and running!"}
 
 if __name__ == "__main__":
     import uvicorn
-
+    requests.post(f"{SERVICE_REGISTRY_URL}/register", json={"service_name": "payments_subsystem", "service_url": f"http://localhost:{os.getenv('payments_subsystem')}"})
     uvicorn.run("payments_subsystem:app", host="0.0.0.0", port=int(os.getenv("payments_subsystem")))

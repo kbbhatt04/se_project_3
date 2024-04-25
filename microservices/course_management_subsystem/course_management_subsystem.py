@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from pymongo.mongo_client import MongoClient
 from fastapi.middleware.cors import CORSMiddleware
 from models import Course
+import requests
 
 import os
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = "mongodb+srv://admin:admin@courses.2nficpj.mongodb.net/?retryWrites=true&w=majority"
+SERVICE_REGISTRY_URL = f"http://localhost:{os.getenv('service_registry_subsystem')}"
 
 app = FastAPI()
 
@@ -74,8 +76,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#generate heartbeat
+@app.get("/health")
+async def health():
+    return {"message": "Service is up and running!"}
 
 if __name__ == "__main__":
     import uvicorn
-
+    requests.post(f"{SERVICE_REGISTRY_URL}/register", json={"service_name": "course_management_subsystem", "service_url": f"http://localhost:{os.getenv('course_management_subsystem')}"})
     uvicorn.run("course_management_subsystem:app", host="0.0.0.0", port=int(os.getenv('course_management_subsystem')))

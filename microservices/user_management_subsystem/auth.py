@@ -14,6 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import random
 import uuid
 
+SERVICE_REGISTRY_URL = f"http://localhost:{os.getenv('service_registry_subsystem')}"
+
 # from jose import JWTError
 
 # put variables into env include jwt secret
@@ -155,6 +157,10 @@ async def logout(response: Response):
 
 
 
+#generate heartbeat
+@app.get("/health")
+async def health():
+    return {"message": "Service is up and running!"}
 
 if client is not None:
     print("Successfully connected to MongoDB")
@@ -163,4 +169,5 @@ else:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    requests.post(f"{SERVICE_REGISTRY_URL}/register", json={"service_name": "user_management_subsystem", "service_url": f"http://localhost:{os.getenv('user_management_subsystem')}"})
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("user_management_subsystem")))

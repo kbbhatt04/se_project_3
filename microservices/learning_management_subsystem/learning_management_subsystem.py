@@ -12,6 +12,7 @@ from pymongo.mongo_client import MongoClient
 load_dotenv()
 
 app = FastAPI()
+SERVICE_REGISTRY_URL = f"http://localhost:{os.getenv('service_registry_subsystem')}"
 
 
 class LearningManagement:
@@ -184,8 +185,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#generate heartbeat
+@app.get("/health")
+async def health():
+    return {"message": "Service is up and running!"}
+
 if __name__ == "__main__":
     import uvicorn
-
+    requests.post(f"{SERVICE_REGISTRY_URL}/register",
+                  json={"service_name": "learning_management_subsystem",
+                        "service_url": f"http://localhost:{os.getenv('learning_management_subsystem')}"})
     uvicorn.run("learning_management_subsystem:app", host="0.0.0.0",
                 port=int(os.getenv("learning_management_subsystem")))
