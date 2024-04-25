@@ -115,5 +115,5 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    requests.post(f"{SERVICE_REGISTRY_URL}/register", json={"service_name": "course_review_subsystem", "service_url": f"http://localhost:{os.getenv('course_review_subsystem')}"})
+    requests.post(f"{SERVICE_REGISTRY_URL}/register_service", json={"service_name": "course_review_subsystem", "service_url": f"http://localhost:{os.getenv('course_review_subsystem')}"})
     uvicorn.run("course_review_subsystem:app", host="0.0.0.0", port=int(os.getenv("course_review_subsystem")))

@@ -169,5 +169,5 @@ else:
 
 if __name__ == "__main__":
     import uvicorn
-    requests.post(f"{SERVICE_REGISTRY_URL}/register", json={"service_name": "user_management_subsystem", "service_url": f"http://localhost:{os.getenv('user_management_subsystem')}"})
+    requests.post(f"{SERVICE_REGISTRY_URL}/register_service", json={"service_name": "user_management_subsystem", "service_url": f"http://localhost:{os.getenv('user_management_subsystem')}"})
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("user_management_subsystem")))
