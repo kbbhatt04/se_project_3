@@ -9,37 +9,16 @@ from typing import Optional
 from datetime import datetime
 import requests
 import time
+import threading
+import smtplib
+from email.mime.text import MIMEText
 
-# import smtplib
-# from email.mime.text import MIMEText
-# from email.mime.multipart import MIMEMultipart
 
-# try:
-#     sender_email = "edumerge.noti@gmail.com"
-#     receiver_email = "pathakutkarsh2615@gmail.com"
-#     # password = "adminadmin123"
-
-#     message = MIMEMultipart()
-#     message['From'] = sender_email
-#     message['To'] = receiver_email
-#     message['Subject'] = 'Test mail'
-
-#     body = 'This is a test email.'
-#     message.attach(MIMEText(body, 'plain'))
-
-#     mail_server = smtplib.SMTP('localhost')
-#     # mail_server.login(sender_email, password)
-#     mail_server.send_message(message)
-#     mail_server.quit()
-
-#     print("Successfully sent")
-
-# except Exception as e:
-#     print('Error:', e)
 
 DATABASE_URL = "mongodb+srv://admin:UVdztRHHWkQC9atH@cluster0.v6xpxbx.mongodb.net/"
 LOAD_BALANCER_URL = "http://localhost:4000"
 SERVICE_REGISTRY_URL = "http://localhost:6000"
+START_HEALTH_MONITOR = False
 
 PING_THRESHOLD = 3
 WAIT_TIME=10
@@ -69,6 +48,31 @@ def get_db():
         print(e)
         print("Failed to connect to MongoDB!")
 
+def send_email(subject,msg, admin_email):
+
+    try:
+        server = smtplib.SMTP('smtp.gmail.com:587') #change accordingly
+        server.ehlo()
+        server.starttls()
+        sender_email = "edumerge.noti@gmail.com"
+        receiver_email = admin_email
+        password = "owbn bubi gmek rpnn"
+
+        server.login(sender_email,password)
+        
+        message = MIMEText(msg)
+        message['From'] = sender_email
+        message['To'] = receiver_email
+        message['Subject'] = subject
+
+        server.sendmail(sender_email,receiver_email,message.as_string())
+        server.quit()
+
+        print("Successfully email sent")
+
+    except Exception as e:
+        print('Error:', e)
+
 app = FastAPI()
 logger=Logger()
 
@@ -78,7 +82,7 @@ class Service(BaseModel):
     service_url: str
 
 # this will be called by service registry subsystem to register a service
-@app.post("/register_service")
+@app.post("/register_service_health_monitor")
 async def register_service(service: Service):
     db = get_db()
     service_collection = db["service_registry"]
@@ -100,15 +104,28 @@ def get_all_services():
 # health_check db
 # { service_id,service_name, missed_ping_count, last_ping_time, status}
 
+@app.get("/start_health_monitor")
+def startup_event():
+    threading.Thread(target=monitor_health, daemon=True).start() 
+
 #monitor health of all services by sending a request to each service
 def monitor_health():
+
+    print("monitoring health started")
     db=get_db()
     while True: 
         services = get_all_services()
         for service in services:
             service_url = service['service_url'] + "/health"
-            response = requests.get(service_url)  #pinging
-            if response.status_code != 200:
+
+            try:
+                response = requests.get(service_url)  #pinging
+                if response.status_code == 200: 
+                    logger.log(message=f"Service: {service['service_name']}, id: {service['id']} is healthy", level='info')
+                    print(f"Service: {service['service_name']} is healthy")
+        
+            except Exception as e :
+
                 health_check_collection = db["health_check"]
                 instance_health_record = health_check_collection.find_one({"service_id": service['id']})
                 if not instance_health_record:
@@ -121,7 +138,13 @@ def monitor_health():
                     }
                     health_check_collection.insert_one(instance_health_record)
                 elif instance_health_record['missed_ping_count'] == PING_THRESHOLD:
-                    #write an email to edumerge.noti@gmail.com
+                    #write an email from edumerge.noti@gmail.com to admin
+
+                    subject = "ALERT!!!"
+                    msg = f"Service down notification\n\nService: {service['service_name']}\nID: {instance_health_record['service_id']}"
+                    admin_email="edumerge.noti@gmail.com"
+                    send_email(subject, msg, admin_email)
+
                     logger.log(message=f"Service: {service['service_name']}, ID: {instance_health_record['service_id']} is down!", level='error')
                     print(f"Service: {service['service_name']} is down!")
 
@@ -147,16 +170,11 @@ def monitor_health():
                     logger.log(message=f"Failed to connect to service: {service['service_name']}, id: {service['id']}", level='error')
                     print(f"Failed to connect to service: {service['service_name']}, id: {service['id']}")
 
-            else:
-                logger.log(message=f"Service: {service['service_name']}, id: {service['id']} is healthy", level='info')
-                print(f"Service: {service['service_name']} is healthy")
-        
-        threading.Timer(WAIT_TIME, monitor_health).start()
+                
+        # threading.Timer(WAIT_TIME, monitor_health).start()
+        time.sleep(WAIT_TIME)
 
 if __name__ == "__main__":
     import uvicorn
-    import threading
-    threading.Thread(target=monitor_health).start()
-    print("Starting health monitor subsystem...")
-    # monitor_health()
-    uvicorn.run("health_monitor_subsystem:app", host="0.0.0.0", port=7000)
+    print("Starting health monitor subsystem")
+    uvicorn.run("health_monitor_subsystem:app", host="0.0.0.0", port=7002)
